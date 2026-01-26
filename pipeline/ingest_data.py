@@ -5,6 +5,7 @@
 import pandas as pd
 from sqlalchemy import create_engine
 import tqdm as tqdm
+import click
 
 
 # In[2]:
@@ -22,13 +23,13 @@ import tqdm as tqdm
 
 
 dtype = {
-    "VendorID": "Int64",
+    "vendor_id": "Int64",
     "passenger_count": "Int64",
     "trip_distance": "float64",
-    "RatecodeID": "Int64",
+    "rate_code_id": "Int64",
     "store_and_fwd_flag": "string",
-    "PULocationID": "Int64",
-    "DOLocationID": "Int64",
+    "pu_location_id": "Int64",
+    "do_location_id": "Int64",
     "payment_type": "Int64",
     "fare_amount": "float64",
     "extra": "float64",
@@ -41,8 +42,8 @@ dtype = {
 }
 
 parse_dates = [
-    "tpep_pickup_datetime",
-    "tpep_dropoff_datetime"
+    "lpep_pickup_datetime",
+    "lpep_dropoff_datetime"
 ]
 
 
@@ -70,25 +71,24 @@ parse_dates = [
 #Create table
 
 
-def run():
-    pg_user = 'root'
-    pg_pass = 'root'
-    pg_host = 'localhost'
-    pg_port = 5432
-    pg_db = 'ny_taxi'
+@click.command()
+@click.option('--pg-user', default='root', help='Postgres user')
+@click.option('--pg-pass', default='root', help='Postgres password')
+@click.option('--pg-host', default='localhost', help='Postgres host')
+@click.option('--pg-port', default=5432, type=int, help='Postgres port')
+@click.option('--pg-db', default='ny_taxi', help='Postgres database')
+@click.option('--year', default=2025, type=int, help='Year of dataset')
+@click.option('--month', default=11, type=int, help='Month of dataset')
+@click.option('--target-table', default='yellow_taxi_data', help='Target Postgres table')
+@click.option('--chunksize', default=100000, type=int, help='CSV read chunk size')
 
-    year = 2021
-    month = 1
-
-    target_table = 'yellow_taxi_data'
-    chunksize = 100000
-
+def run(pg_user, pg_pass, pg_host, pg_port, pg_db, year, month, target_table, chunksize):
     prefix = 'https://github.com/DataTalksClub/nyc-tlc-data/releases/download/yellow/'
     url = f'{prefix}/yellow_tripdata_{year}-{month:02d}.csv.gz'
     engine = create_engine(f'postgresql://{pg_user}:{pg_pass}@{pg_host}:{pg_port}/{pg_db}')
-
+    newUrl = "https://raw.githubusercontent.com/nburbanos/data-engineering-zoomcamp/master/output.csv"
     df_iter = pd.read_csv(
-        url,
+        newUrl,
         dtype=dtype,
         parse_dates=parse_dates,
         iterator=True,
@@ -96,7 +96,7 @@ def run():
     )
 
     first=True
-    for df_chunk in df_iter:
+    for df_chunk in tqdm.tqdm(df_iter):
         if first:
             # Create table schema (no data)
             df_chunk.head(0).to_sql(
@@ -115,55 +115,6 @@ def run():
         )
 
     print("Inserted:", len(df_chunk))
-# In[14]:
-
-
-#To see progress as we insert data
-# get_ipython().system('uv add tqdm')
-
-
-# In[17]:
-
-
-#Defining iterator
-# df_iter = pd.read_csv(
-#     prefix + 'yellow_tripdata_2021-01.csv.gz',
-#     dtype = dtype,
-#     parse_dates=parse_dates,
-#     iterator=True,
-#     chunksize=100000
-# )
-
-
-# In[18]:
-
-
-##### Complete ingestion loop
-# first = True
-
-# for df_chunk in df_iter:
-
-#     if first:
-#         # Create table schema (no data)
-#         df_chunk.head(0).to_sql(
-#             name="yellow_taxi_data",
-#             con=engine,
-#             if_exists="replace"
-#         )
-#         first = False
-#         print("Table created")
-
-#     # Insert chunk
-#     df_chunk.to_sql(
-#         name="yellow_taxi_data",
-#         con=engine,
-#         if_exists="append"
-#     )
-
-#     print("Inserted:", len(df_chunk))
-######
-
-# In[ ]:
 
 if __name__ == '__main__':
     run()
