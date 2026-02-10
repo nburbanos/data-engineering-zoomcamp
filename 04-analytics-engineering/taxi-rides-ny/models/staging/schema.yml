@@ -14,7 +14,7 @@ models:
     description: >
       Staging model for green taxi trip data. This model standardizes column names
       and data types from the raw green_tripdata source, providing a clean foundation
-      for downstream transformations.
+      for downstream make a change
     columns:
       - name: vendor_id
         description: Taxi technology provider (1 = Creative Mobile Technologies, 2 = VeriFone Inc.)
